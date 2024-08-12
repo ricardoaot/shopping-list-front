@@ -3,6 +3,7 @@
 
 import { useContext, useEffect, useState } from 'react';
 import { useSocket } from '../context/SocketContext';
+import axios from 'axios';
 import { Container, Typography, List, ListItem, ListItemText, IconButton, Checkbox, TextField, Button, Paper } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckIcon from '@mui/icons-material/Check';
@@ -15,6 +16,7 @@ interface Item {
   name: string;
   purchased: boolean;
 }
+const urlApp = 'http://localhost:5000'
 
 const Home: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
@@ -26,12 +28,6 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     if (socket) {
-      const fetchItems = async () => {
-        const res = await fetch('http://localhost:5000/items');
-        const data = await res.json();
-        setItems(data);
-      };
-
       console.log('Loading items...');
       fetchItems();
       socket.on('itemAdded', fetchItems);
@@ -46,16 +42,32 @@ const Home: React.FC = () => {
     }
   }, [socket]);
 
+  const fetchItems = async () => {
+    try {
+      const response = await axios.get(`${urlApp}/items`);
+      setItems(response.data);
+    } catch (error) {
+      console.error('Error fetching items:', error);
+    }
+  };
+
   const handleDelete = async (id: string) => {
-    await fetch(`http://localhost:5000/items/${id}`, { method: 'DELETE' });
+    //await fetch(`${urlApp}/items/${id}`, { method: 'DELETE' });
+    try {
+      await axios.delete(`${urlApp}/items/${id}`);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
   };
 
   const handleTogglePurchased = async (id: string, purchased: boolean) => {
-    await fetch(`http://localhost:5000/items/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ purchased: !purchased }),
-    });
+    try {
+      await axios.put(`${urlApp}/items/${id}`, {
+        purchased: !purchased,
+      });
+    } catch (error) {
+      console.error('Error updating item:', error);
+    }
   };
 
   const handleEditClick = (item: Item) => {
@@ -64,25 +76,39 @@ const Home: React.FC = () => {
   };
 
   const handleSaveClick = async (id: string) => {
-    await fetch(`http://localhost:5000/items/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: editName }),
-    });
-    setEditingItem(null);
+    /*
+      await fetch(`${urlApp}/items/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName }),
+      });
+    */
+
+    try {
+      await axios.put(`${urlApp}/items/${id}`, {
+        name: editName,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Error updating item:', error);
+    }
   };
 
   const handleAddItem = async () => {
     if (newItemName.trim() === '') return;
 
-    const response = await fetch('http://localhost:5000/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newItemName, purchased: false }),
-    });
-
-    if (response.ok) {
+    try {
+      await axios.post(`${urlApp}/items`, {
+        name: newItemName,
+        purchased: false,
+      });
       setNewItemName('');
+    } catch (error) {
+      console.error('Error adding item:', error);
     }
   };
 
